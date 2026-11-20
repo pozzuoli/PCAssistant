@@ -13,8 +13,8 @@ command: pca-baseline
 scripts:
   posix: pca-baseline.sh
   windows: pca-baseline.ps1
-version: 1.0
-updated: 2026-11-04
+version: 1.1
+updated: 2026-11-20
 ---
 
 # system-baseline
@@ -49,7 +49,8 @@ Nothing to roll back: the skill is read-only. Captures can be deleted freely.
 
 ## Platform status
 - POSIX: tested on Linux (Ubuntu/GNOME). The macOS/BSD branches are written but untested.
-- Windows: **not yet tested on a real Windows machine.**
+- Windows: tested on Windows 11 with Windows PowerShell 5.1 and PowerShell 7 (2026-11-20). CI: `tests/windows/pca-baseline.Tests.ps1`. Without elevation the optional-features list is skipped and fewer scheduled tasks are visible.
 
 ## Changelog
 - 1.0 (2026-11-04): created.
+- 1.1 (2026-11-20): Windows: `pkg-winget.json` is captured again. `winget export` used to target the file that the capture helper held open, so it failed with a sharing violation and the file was silently dropped. `--diff` reads captures as UTF-8, so a capture taken in one shell can be compared in the other without false differences. The script is ASCII-only so Windows PowerShell 5.1 reads it correctly.
