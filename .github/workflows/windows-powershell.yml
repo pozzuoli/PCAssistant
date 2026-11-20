@@ -1,0 +1,80 @@
+# Windows PowerShell checks for the skills scripts.
+# The scripts promise Windows PowerShell 5.1+ and PowerShell 7, so the checks run against both.
+# How to run the same checks locally: tests/windows/README.md
+name: Windows PowerShell
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**/*.ps1'
+      - 'tests/windows/**'
+      - '.github/workflows/windows-powershell.yml'
+  pull_request:
+    paths:
+      - 'skills/**/*.ps1'
+      - 'tests/windows/**'
+      - '.github/workflows/windows-powershell.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its older run; runs on main always finish, so every commit gets a verdict.
+concurrency:
+  group: windows-powershell-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PSSA_VERSION: '1.23.0'
+  PESTER_VERSION: '5.6.1'
+
+jobs:
+  lint:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install PSScriptAnalyzer ${{ env.PSSA_VERSION }}
+        shell: pwsh
+        run: Install-Module -Name PSScriptAnalyzer -RequiredVersion $env:PSSA_VERSION -Scope CurrentUser -Force
+      - name: Lint skills/
+        shell: pwsh
+        run: ./tests/windows/Invoke-Lint.ps1 -AnalyzerVersion $env:PSSA_VERSION
+
+  parse:
+    name: Parse in 5.1 and 7
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compare how both shells parse each script
+        shell: pwsh
+        run: ./tests/windows/Test-ParseParity.ps1
+
+  pester:
+    name: Pester (${{ matrix.shell }})
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [powershell, pwsh]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Pester ${{ env.PESTER_VERSION }}
+        shell: pwsh
+        # -SkipPublisherCheck: Windows ships an older, differently signed Pester 3.4.0
+        run: Install-Module -Name Pester -RequiredVersion $env:PESTER_VERSION -Scope CurrentUser -Force -SkipPublisherCheck
+      - name: Run the tests with ${{ matrix.shell }} as the shell under test
+        shell: pwsh
+        env:
+          SHELL_UNDER_TEST: ${{ matrix.shell }}
+        run: ./tests/windows/Invoke-Tests.ps1 -Shell $env:SHELL_UNDER_TEST -PesterVersion $env:PESTER_VERSION
