@@ -1,5 +1,5 @@
 <#
-scan.ps1 — READ-ONLY system scan for PC Assistant first-time setup (Windows 10/11, Windows Server 2016+).
+scan.ps1 - READ-ONLY system scan for PC Assistant first-time setup (Windows 10/11, Windows Server 2016+).
 Prints a markdown report to stdout. Changes nothing. Every probe is optional; failures are skipped.
 Works in Windows PowerShell 5.1 and PowerShell 7+.
 Usage:  powershell -NoProfile -ExecutionPolicy Bypass -File scan.ps1 > scan.md
@@ -47,7 +47,7 @@ KV '%USERPROFILE%\.pca\bin on PATH' $(if (($env:PATH -split ';') -contains (Join
 
 Sec 'Hardware'
 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
-KV 'CPU' "$($cpu.Name.Trim()) — $($cpu.NumberOfCores) cores / $($cpu.NumberOfLogicalProcessors) threads"
+KV 'CPU' "$($cpu.Name.Trim()) - $($cpu.NumberOfCores) cores / $($cpu.NumberOfLogicalProcessors) threads"
 KV 'RAM' ('{0:N1} GiB' -f ($cs.TotalPhysicalMemory / 1GB))
 KV 'GPU' ((Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name }) -join '; ')
 KV 'Model' "$($cs.Manufacturer) $($cs.Model)"
@@ -73,7 +73,7 @@ KV 'Windows features cmdlets' $(if (Has Get-WindowsFeature) { 'Get-WindowsFeatur
 KV 'WSL' $(if (Has wsl) { (wsl --list --quiet 2>$null | Where-Object { $_ -match '\S' }) -join ', ' })
 
 Sec 'Elevation'
-KV 'Method' 'UAC — run an elevated PowerShell/Terminal ("Run as administrator")'
+KV 'Method' 'UAC - run an elevated PowerShell/Terminal ("Run as administrator")'
 KV 'sudo for Windows' $(if (Has sudo) { 'present' } else { 'not present' })
 
 Sec 'Rollback / snapshot tools'
