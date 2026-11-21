@@ -1,5 +1,5 @@
 <#
-pca-baseline (Windows) — capture a READ-ONLY snapshot of system state into logging\baseline\<stamp>\,
+pca-baseline (Windows) - capture a READ-ONLY snapshot of system state into logging\baseline\<stamp>\,
 or diff two snapshots. Part of the system-baseline skill.
   pca-baseline [label]            capture (dir: YYYY-MM-DD_HHmm[_label])
   pca-baseline --list             list baselines
@@ -20,7 +20,8 @@ switch ($args[0]) {
             $fa = Join-Path $a $n; $fb = Join-Path $b $n
             if (-not (Test-Path $fa)) { "+++ only in $($args[2]): $n"; continue }
             if (-not (Test-Path $fb)) { "--- only in $($args[1]): $n"; continue }
-            $d = Compare-Object (Get-Content $fa) (Get-Content $fb)
+            # captures are UTF-8 (BOM from 5.1, none from 7); read them as UTF-8 so either shell can diff either
+            $d = Compare-Object (Get-Content -LiteralPath $fa -Encoding UTF8) (Get-Content -LiteralPath $fb -Encoding UTF8)
             if ($d) { "=== $n"; $d | ForEach-Object { "$(if ($_.SideIndicator -eq '=>') { '+' } else { '-' }) $($_.InputObject)" } }
         }
         exit 0
@@ -44,7 +45,15 @@ Cap 'pkg-installed-programs.txt' {
         ForEach-Object { Get-ItemProperty $_ } | Where-Object DisplayName | Sort-Object DisplayName |
         ForEach-Object { "$($_.DisplayName)`t$($_.DisplayVersion)`t$($_.Publisher)" }
 }
-if (Get-Command winget) { Cap 'pkg-winget.json' { winget export -o (Join-Path $Out 'pkg-winget.json') --accept-source-agreements | Out-Null; Get-Content (Join-Path $Out 'pkg-winget.json') } }
+if (Get-Command winget) {
+    # winget writes the export file itself. Exporting through Cap would aim it at the file Out-File already holds
+    # open (sharing violation, no file), so export to a temp file and move it into place.
+    $wj = Join-Path ([IO.Path]::GetTempPath()) ('pca-winget-' + [guid]::NewGuid().ToString('N') + '.json')
+    winget export -o $wj --accept-source-agreements | Out-Null
+    if ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $wj) -and (Get-Item -LiteralPath $wj).Length -gt 0) {
+        Move-Item -LiteralPath $wj -Destination (Join-Path $Out 'pkg-winget.json') -Force
+    } else { Remove-Item -LiteralPath $wj -ErrorAction SilentlyContinue }
+}
 if (Get-Command choco) { Cap 'pkg-choco.txt' { choco list --limit-output } }
 if (Get-Command scoop) { Cap 'pkg-scoop.txt' { scoop list } }
 Cap 'pkg-appx.txt' { Get-AppxPackage | Sort-Object Name | ForEach-Object { "$($_.Name)`t$($_.Version)" } }
@@ -60,6 +69,6 @@ Cap 'env-machine-path.txt' { [Environment]::GetEnvironmentVariable('Path', 'Mach
 
 # redact obvious secrets in config-type captures (package/service lists are left alone)
 Get-ChildItem $Out -File | Where-Object { $_.Name -notmatch '^(pkg-|services|features-)' } | ForEach-Object {
-    (Get-Content $_.FullName) -replace '(?i)([a-z0-9_.-]*(password|passwd|secret|token|api[_-]?key|psk|credentials)[a-z0-9_.-]*\s*[=:]\s*).*', '$1[REDACTED]' -replace '://[^/@\s:]+:[^/@\s]+@', '://[REDACTED]@' | Set-Content $_.FullName -Encoding utf8
+    (Get-Content -LiteralPath $_.FullName -Encoding UTF8) -replace '(?i)([a-z0-9_.-]*(password|passwd|secret|token|api[_-]?key|psk|credentials)[a-z0-9_.-]*\s*[=:]\s*).*', '$1[REDACTED]' -replace '://[^/@\s:]+:[^/@\s]+@', '://[REDACTED]@' | Set-Content $_.FullName -Encoding utf8
 }
 "pca-baseline: captured $((Get-ChildItem $Out -File).Count) files -> $($Out.Substring($Root.Length + 1))"

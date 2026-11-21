@@ -13,8 +13,8 @@ command: none
 scripts:
   posix: scan.sh, install-commands.sh
   windows: scan.ps1, install-commands.ps1
-version: 1.1
-updated: 2026-11-05
+version: 1.2
+updated: 2026-11-20
 ---
 
 # first-time-setup
@@ -161,8 +161,12 @@ Each step: explain it, get approval, reserve an ID, back up anything you'll edit
 Each step's undo is in its CHANGELOG entry. A full reset: run every entry's undo in reverse order, then delete `profile/*.md` (except `README.md`) and the generated `logging/` contents.
 
 ## Platform status
-- Linux: designed and partly tested (Ubuntu). Windows/macOS/BSD steps are written from documented behavior and not yet tested end to end. Fix and log anything you find on first real use.
+- Linux: designed and partly tested (Ubuntu).
+- Windows 11: run end to end once (2026-11-20), without setting up a new rollback tool. `scan.ps1` still reports some values wrongly: BitLocker when it is off, sudo for Windows when it is disabled, WSL distro names, and restore points when not elevated. Check those by hand until fixed.
+- macOS/BSD: steps are written from documented behavior and not yet tested end to end.
+- Fix and log anything you find on first real use.
 
 ## Changelog
 - 1.0 (2026-11-04): created.
 - 1.1 (2026-11-05): elevation step now detects sudo-rs (no global timestamp) and covers scoped passwordless sudo, including symlinked binaries. Learned on Ubuntu 26.04.
+- 1.2 (2026-11-20): `scan.ps1` and `install-commands.ps1` are ASCII-only, so the documented Windows PowerShell 5.1 commands work. Before, `scan.ps1` failed to parse in 5.1 on systems with code page 1252.

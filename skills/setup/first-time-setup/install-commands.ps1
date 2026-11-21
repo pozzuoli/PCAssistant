@@ -1,5 +1,5 @@
 <#
-install-commands.ps1 — expose every skills\**\pca-*.ps1 script as a `pca-*` command (Windows).
+install-commands.ps1 - expose every skills\**\pca-*.ps1 script as a `pca-*` command (Windows).
 Creates .cmd shims in %USERPROFILE%\.pca\bin and adds that folder to the *user* PATH (no admin needed).
 Idempotent: re-run after adding a skill. Removes shims whose target script no longer exists.
   powershell -NoProfile -ExecutionPolicy Bypass -File install-commands.ps1 [-Bin <dir>]
